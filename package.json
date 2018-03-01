@@ -1,0 +1,28 @@
+{
+    "name"         : "jf-cli",
+    "version"      : "0.1.0",
+    "description"  : "Facilitates the execution of scripts from the command line with log and file system utilities.",
+    "main"         : "src/Cli.js",
+    "repository"   : {
+        "type" : "git",
+        "url"  : "git+https://github.com/joaquinfq/jfCli.git"
+    },
+    "keywords"     : [
+        "cli",
+        "command",
+        "options",
+        "script",
+        "yargs"
+    ],
+    "author"       : "Joaquín Fernández <public@joaquinfernandez.net>",
+    "license"      : "MIT",
+    "bugs"         : {
+        "url" : "https://github.com/joaquinfq/jfCli/issues"
+    },
+    "homepage"     : "https://github.com/joaquinfq/jfCli",
+    "dependencies" : {
+        "augment-object" : "^0.1.4",
+        "jf-file-system" : "^2.0.0",
+        "jf-logger"      : "^0.2.0"
+    }
+}

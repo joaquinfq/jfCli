@@ -1,10 +1,9 @@
 const chalk        = require('chalk');
 const Command      = require('./Command');
-const fs           = require('fs');
 const jfFileSystem = require('jf-file-system');
 const jfLogger     = require('jf-logger');
 const path         = require('path');
-const spawn        = require('child_process').spawn;
+const Spawn        = require('./Spawn');
 /**
  * Gestiona la ejecución de scripts desde la línea de comandos.
  *
@@ -117,7 +116,7 @@ class jfCli extends jfLogger
      * @param {Command} command Comando seleccionado.
      * @param {Object}  argv    Argumentos recibidos de la línea de comandos.
      */
-    handler(command, argv)
+    async handler(command, argv)
     {
         this.log('debug', 'Comando: %s -- %s', command.name, command.description);
         this.command   = command;
@@ -126,6 +125,10 @@ class jfCli extends jfLogger
         const _cmdDir  = path.join(_dirs[_subdirs[0]] || this.rootDir, 'src', 'commands');
         let   _method  = '';
         let   _result  = false;
+        if (_subdirs[0] in _dirs)
+        {
+            _subdirs.shift();
+        }
         while (_result !== true && _subdirs.length)
         {
             const _filename = path.join(_cmdDir, ..._subdirs) + '.js';
@@ -136,7 +139,7 @@ class jfCli extends jfLogger
                     let _handler = require(_filename);
                     if (_method && typeof _handler[_method] === 'function')
                     {
-                        _result = this._run(
+                        _result = await this._run(
                             _handler[_method].bind(_handler),
                             argv,
                             chalk.magenta(`${path.basename(_filename)}::${_method}(...)`)
@@ -144,7 +147,7 @@ class jfCli extends jfLogger
                     }
                     else if (typeof _handler === 'function')
                     {
-                        _result = this._run(
+                        _result = await this._run(
                             _handler,
                             argv,
                             chalk.magenta(`${path.basename(_filename)}::${_handler.name || ''}(...)`)
@@ -237,15 +240,15 @@ class jfCli extends jfLogger
      *
      * @protected
      */
-    _run(handler, argv, name)
+    async _run(handler, argv, name)
     {
         this.log('info', 'Ejecutando %s', name);
 
-        return handler(this, argv);
+        return await handler(this, argv);
     }
 
     /**
-     * Ejecuta un script.
+     * Ejecuta un script de manera asíncrona.
      *
      * @param {String}  cmd     Nombre o ruta del script.
      * @param {Array?}  args    Argumentos del script.
@@ -255,51 +258,7 @@ class jfCli extends jfLogger
      */
     async script(cmd, args = [], options = {})
     {
-        return new Promise(
-            (resolve, reject) =>
-            {
-                let _isRejected = false;
-                const _process = spawn(
-                    cmd,
-                    args,
-                    Object.assign(
-                        {
-                            cwd   : process.cwd(),
-                            stdio : 'inherit',
-                            shell : true
-                        },
-                        options
-                    )
-                );
-                _process.on(
-                    'error',
-                    error => {
-                        if (!_isRejected)
-                        {
-                            _isRejected = true;
-                            reject(error)
-                        }
-                    }
-                );
-                _process.on(
-                    'exit',
-                    code => {
-                        if (!_isRejected)
-                        {
-                            if (code === 0)
-                            {
-                                resolve(_process)
-                            }
-                            else
-                            {
-                                _isRejected = true;
-                                reject(new Error(code))
-                            }
-                        }
-                    }
-                );
-            }
-        );
+        return new Spawn(this).run(cmd, args, options);
     }
 }
 

@@ -1,5 +1,6 @@
 const chalk        = require('chalk');
 const Command      = require('./Command');
+const fromFiles    = require('./tools/from-files');
 const jfFileSystem = require('jf-file-system');
 const jfLogger     = require('jf-logger');
 const path         = require('path');
@@ -88,13 +89,11 @@ class jfCli extends jfLogger
         {
             try
             {
-                this.loadCommands(
-                    JSON.parse(this.read(_cliFile))
-                );
+                this.loadCommands(JSON.parse(this.read(_cliFile)));
             }
             catch (error)
             {
-                this.error('Error al analizar el archivo %s: %s', _cliFile, error.message);
+                this.logException(error);
             }
         }
     }
@@ -238,13 +237,15 @@ class jfCli extends jfLogger
      * @param {Object}   argv    Argumentos recibidos de la línea de comandos.
      * @param {String}   name    Nombre del comando que se va a ejecutar.
      *
+     * @return {Promise} Promesa que resuelve el manejador.
+     *
      * @protected
      */
     async _run(handler, argv, name)
     {
         this.log('info', 'Ejecutando %s', name);
 
-        return await handler(this, argv);
+        return handler(this, argv);
     }
 
     /**
@@ -259,6 +260,41 @@ class jfCli extends jfLogger
     async script(cmd, args = [], options = {})
     {
         return new Spawn(this).run(cmd, args, options);
+    }
+    /**
+     * Actualiza el archivo de configuración agregando comandos de otros proyectos.
+     */
+    update()
+    {
+        const _directories = this.directories;
+        const _output = {};
+        for (const _project of Object.keys(_directories))
+        {
+            const _directory = _directories[_project];
+            const _commands = {};
+            fromFiles(this, _commands, this.scandir(path.join(_directory, 'src', 'commands')));
+            const _names = Object.keys(_commands);
+            if (_names.length)
+            {
+                _names.forEach(
+                    name => _output[_project + ':' + name] = _commands[name]
+                );
+            }
+        }
+        const _cliFile = path.join(this.rootDir, '.jfcli');
+        this.write(
+            _cliFile,
+            JSON.stringify(
+                Object.assign(
+                    this.exists(_cliFile)
+                        ? JSON.parse(this.read(_cliFile))
+                        : {},
+                    _output
+                ),
+                null,
+                4
+            )
+        );
     }
 }
 

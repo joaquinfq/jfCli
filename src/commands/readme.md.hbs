@@ -1,0 +1,29 @@
+# {{name}}
+
+
+{{description}}
+
+
+## Comandos
+
+{{#each commands}}
+
+### {{name}}
+
+
+{{description}}
+{{#if options}}
+
+
+#### Opciones
+
+{{#each headers}}
+| {{#each .}} {{.}} |{{/each}}
+{{/each}}
+{{#each options}}
+| {{#each .}} {{.}} |{{/each}}
+{{/each}}
+
+{{/if}}
+
+{{/each}}

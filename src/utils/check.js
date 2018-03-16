@@ -1,4 +1,30 @@
 const path = require('path');
+
+function checkDir(directory)
+{
+    const _cwd = process.cwd();
+    if (!directory)
+    {
+        directory = _cwd;
+    }
+    else if (Array.isArray(directory))
+    {
+        directory.forEach((dir, index) => directory[index] = checkDir(dir));
+    }
+    else if (typeof directory === 'object')
+    {
+        Object.keys(directory).forEach(
+            dir => directory[dir] = checkDir(directory[dir])
+        )
+    }
+    else if (path.isAbsolute(directory[0]))
+    {
+        directory = path.join(_cwd, directory);
+    }
+
+    return directory;
+}
+
 /**
  * Realiza algunas comprobaciones comunes a los comandos del módulo.
  */
@@ -12,27 +38,6 @@ module.exports = {
      */
     directory(cli, argv)
     {
-        const _cwd       = process.cwd();
-        const _directory = argv.directory;
-        if (!_directory)
-        {
-            argv.directory = argv.d = _cwd;
-        }
-        else if (Array.isArray(_directory))
-        {
-            _directory.forEach(
-                (dir, index) =>
-                {
-                    if (dir[0] !== '/')
-                    {
-                        _directory[index] = argv.d[index] = path.join(_cwd, dir);
-                    }
-                }
-            )
-        }
-        else if (_directory[0] !== '/')
-        {
-            argv.directory = argv.d = path.join(_cwd, _directory);
-        }
+        argv.directory = argv.d = checkDir(argv.directory);
     }
 };

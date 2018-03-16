@@ -140,48 +140,52 @@ function identifier(node)
  */
 function parse(cli, commands, file)
 {
-    const _ast  = babylon
-        .parse(
-            cli.read(file),
-            {
-                plugins,
-                sourceType : 'module',
-                ranges     : false,
-                tokens     : false
-            }
-        );
-    const _body = _ast.program.body;
-    if (Array.isArray(_body))
+    const _extension = path.extname(file);
+    if (_extension === '.js' || _extension === '.mjs')
     {
-        const _commands = {};
-        const _prefix   = cc2sep(path.basename(file, path.extname(file)));
-        _body.forEach(
-            node =>
-            {
-                switch (node.type)
+        const _ast  = babylon
+            .parse(
+                cli.read(file),
                 {
-                    case 'ExpressionStatement':
-                        expressionStatement(_commands, node);
-                        break;
-                    case 'FunctionDeclaration':
-                        functionDeclaration(_commands, node);
-                        break;
-                    case 'VariableDeclaration':
-                        variableDeclaration(_commands, node);
-                        break;
+                    plugins,
+                    sourceType : 'module',
+                    ranges     : false,
+                    tokens     : false
                 }
-            }
-        );
-        if (_prefix in _commands)
+            );
+        const _body = _ast.program.body;
+        if (Array.isArray(_body))
         {
-            commands[_prefix] = _commands[_prefix];
-            delete _commands[_prefix];
-        }
-        for (let _command of Object.keys(_commands).sort(sort))
-        {
-            if (_command)
+            const _commands = {};
+            const _prefix   = cc2sep(path.basename(file, path.extname(file)));
+            _body.forEach(
+                node =>
+                {
+                    switch (node.type)
+                    {
+                        case 'ExpressionStatement':
+                            expressionStatement(_commands, node);
+                            break;
+                        case 'FunctionDeclaration':
+                            functionDeclaration(_commands, node);
+                            break;
+                        case 'VariableDeclaration':
+                            variableDeclaration(_commands, node);
+                            break;
+                    }
+                }
+            );
+            if (_prefix in _commands)
             {
-                commands[_prefix + ':' + _command] = _commands[_command];
+                commands[_prefix] = _commands[_prefix];
+                delete _commands[_prefix];
+            }
+            for (let _command of Object.keys(_commands).sort(sort))
+            {
+                if (_command)
+                {
+                    commands[_prefix + ':' + _command] = _commands[_command];
+                }
             }
         }
     }
@@ -275,6 +279,6 @@ module.exports = function fromFiles(cli, commands, files)
     }
     catch (e)
     {
-        console.log(e.message);
+        cli.logException(e);
     }
 };

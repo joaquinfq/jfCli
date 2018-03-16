@@ -1,5 +1,6 @@
 const babylon   = require('babylon');
 const cc2sep    = require('cc2sep');
+const Option    = require('../Option');
 const path      = require('path');
 const reBrief   = /\s+(?:\*\s+)+/m;
 const reCommand = /@command([^\n\r]*)/;
@@ -85,7 +86,6 @@ function extractComment(node)
             _info = parseComment(_info);
         }
     }
-
     return _info;
 }
 
@@ -140,7 +140,7 @@ function identifier(node)
  */
 function parse(cli, commands, file)
 {
-    const _ast = babylon
+    const _ast  = babylon
         .parse(
             cli.read(file),
             {
@@ -169,7 +169,6 @@ function parse(cli, commands, file)
                     case 'VariableDeclaration':
                         variableDeclaration(_commands, node);
                         break;
-
                 }
             }
         );
@@ -201,11 +200,11 @@ function parseComment(comment)
         const _command = comment.match(reCommand);
         if (_command)
         {
-            const _config  = _result[cc2sep(_command[1].trim())] = {};
+            const _config = _result[cc2sep(_command[1].trim())] = {};
             const _brief = comment.split(reBrief);
             if (_brief)
             {
-                _config['?'] = _brief[1].trim();
+                _config[''] = _brief[1].trim();
             }
             const _options = comment.match(reOption);
             if (_options)
@@ -214,13 +213,12 @@ function parseComment(comment)
                     option =>
                     {
                         const [, _name, ..._desc] = option.split(/\s+/);
-                        _config[_name] = _desc.join(' ');
+                        _config[_name]            = new Option(_name + '|' + _desc.join(' '));
                     }
                 );
             }
         }
     }
-
     return _result;
 }
 

@@ -1,31 +1,33 @@
 {
-    "name"         : "jf-cli",
-    "version"      : "0.1.1",
-    "description"  : "Facilitates the execution of scripts from the command line with log and file system utilities.",
-    "main"         : "src/Cli.js",
-    "repository"   : {
-        "type" : "git",
-        "url"  : "git+https://github.com/joaquinfq/jfCli.git"
+    "name": "jf-cli",
+    "version": "0.1.1",
+    "description": "Facilitates the execution of scripts from the command line with log and file system utilities.",
+    "main": "src/Cli.js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/joaquinfq/jfCli.git"
     },
-    "keywords"     : [
+    "keywords": [
         "cli",
         "command",
         "options",
         "script",
         "yargs"
     ],
-    "author"       : "Joaquín Fernández <public@joaquinfernandez.net>",
-    "license"      : "MIT",
-    "bugs"         : {
-        "url" : "https://github.com/joaquinfq/jfCli/issues"
+    "author": "Joaquín Fernández <public@joaquinfernandez.net>",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/joaquinfq/jfCli/issues"
     },
-    "homepage"     : "https://github.com/joaquinfq/jfCli",
-    "dependencies" : {
-        "augment-object" : "^0.1.4",
-        "babylon"        : "^6.18.0",
-        "cc2sep"         : "^1.0.2",
-        "chalk"          : "^2.3.2",
-        "jf-file-system" : "^2.0.0",
-        "jf-logger"      : "^0.2.0"
+    "homepage": "https://github.com/joaquinfq/jfCli",
+    "dependencies": {
+        "augment-object": "^0.1.4",
+        "babylon": "^6.18.0",
+        "cc2sep": "^1.0.2",
+        "chalk": "^2.3.2",
+        "handlebars": "^4.0.11",
+        "jf-file-system": "^2.0.0",
+        "jf-logger": "^0.2.0",
+        "pad-values": "^1.0.1"
     }
 }

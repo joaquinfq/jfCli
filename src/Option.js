@@ -139,4 +139,26 @@ module.exports = class jfCliOption
             this.default = _default;
         }
     }
+
+    /**
+     * @override
+     */
+    toString()
+    {
+        const _segments = [
+            this.name,
+            this.description,
+            this.alias
+        ];
+        if (this.type !== 'boolean')
+        {
+            _segments.push(this.type);
+            if (!this.required)
+            {
+                _segments.push('');
+            }
+        }
+
+        return _segments.join('|');
+    }
 };

@@ -1,10 +1,10 @@
 const chalk        = require('chalk');
 const Command      = require('./Command');
-const fromFiles    = require('./tools/from-files');
 const jfFileSystem = require('jf-file-system');
 const jfLogger     = require('jf-logger');
 const path         = require('path');
 const Spawn        = require('./Spawn');
+
 /**
  * Gestiona la ejecución de scripts desde la línea de comandos.
  *
@@ -57,10 +57,9 @@ class jfCli extends jfLogger
     /**
      * Constructor de la clase.
      *
-     * @param {Object}  directories Mapa con la ruta raíz para cada comandos.
-     * @param {String?} rootDir     Ruta raíz del proyecto.
+     * @param {String?} rootDir Ruta raíz del proyecto.
      */
-    constructor(directories, rootDir = '')
+    constructor(rootDir = '')
     {
         super();
         /**
@@ -70,32 +69,44 @@ class jfCli extends jfLogger
          */
         this.command = null;
         /**
+         * Listado de comandos disponible.
+         *
+         * @type {Object}
+         */
+        this.commands = {};
+        /**
          * Mapa con la ruta raíz para cada comandos.
          *
          * @type {Object}
          */
-        this.directories = directories || {};
+        this.directories = {};
         /**
          * Ruta raíz del proyecto.
          *
          * @type {String}
          */
         this.rootDir = rootDir || this.findUp(process.mainModule.filename, 'package.json');
+        /**
+         * Indica si se muestra el stack al imprimir una excepción.
+         *
+         * @type {boolean}
+         */
+        this.showStack = true;
+        /**
+         * Manejador de las plantillas.
+         *
+         * @type {null|jf.cli.Tpl}
+         */
+        this.tpl = null;
         //------------------------------------------------------------------------------
-        // Cargamos los comandos del proyecto.
+        // Cargamos los comandos que son métodos de clase y la configuración.
         //------------------------------------------------------------------------------
-        const _cliFile = path.join(this.rootDir, '.jfcli');
-        if (this.exists(_cliFile))
-        {
-            try
+        this.loadCommands(
             {
-                this.loadCommands(JSON.parse(this.read(_cliFile)));
+                'update' : 'Actualiza el archivo de configuración'
             }
-            catch (error)
-            {
-                this.logException(error);
-            }
-        }
+        );
+        this._parseConfig();
     }
 
     /**
@@ -110,6 +121,21 @@ class jfCli extends jfLogger
     }
 
     /**
+     * Devuelve el manejador de plantillas.
+     *
+     * @return {jf.cli.Tpl} Manejador de plantillas.
+     */
+    getTpl()
+    {
+        let _tpl = this.tpl;
+        if (!_tpl)
+        {
+            _tpl = this.tpl = new (require('./Tpl'))(this);
+        }
+        return _tpl;
+    }
+
+    /**
      * Procesa el comando y llama al manejador.
      *
      * @param {Command} command Comando seleccionado.
@@ -117,48 +143,56 @@ class jfCli extends jfLogger
      */
     async handler(command, argv)
     {
-        this.log('debug', 'Comando: %s -- %s', command.name, command.description);
+        const _name = command.name;
+        this.log('debug', 'Comando: %s -- %s', _name, command.description);
         this.command   = command;
-        const _dirs    = this.directories;
-        const _subdirs = command.name.split(':');
-        const _cmdDir  = path.join(_dirs[_subdirs[0]] || this.rootDir, 'src', 'commands');
-        let   _method  = '';
-        let   _result  = false;
-        if (_subdirs[0] in _dirs)
+        const _subdirs = _name.split(':');
+        let _result    = false;
+        if (_subdirs[1])
         {
-            _subdirs.shift();
-        }
-        while (_result !== true && _subdirs.length)
-        {
-            const _filename = path.join(_cmdDir, ..._subdirs) + '.js';
-            if (this.exists(_filename))
+            const _dirs   = this.directories;
+            const _cmdDir = path.join(this.resolveDir(_dirs[_subdirs[0]]) || this.rootDir, 'src', 'commands');
+            let _method   = '';
+            if (_subdirs[0] in _dirs)
             {
-                try
-                {
-                    let _handler = require(_filename);
-                    if (_method && typeof _handler[_method] === 'function')
-                    {
-                        _result = await this._run(
-                            _handler[_method].bind(_handler),
-                            argv,
-                            chalk.magenta(`${path.basename(_filename)}::${_method}(...)`)
-                        );
-                    }
-                    else if (typeof _handler === 'function')
-                    {
-                        _result = await this._run(
-                            _handler,
-                            argv,
-                            chalk.magenta(`${path.basename(_filename)}::${_handler.name || ''}(...)`)
-                        );
-                    }
-                }
-                catch (error)
-                {
-                    this.logException(error);
-                }
+                _subdirs.shift();
             }
-            _method = _subdirs.pop();
+            while (_result !== true && _subdirs.length)
+            {
+                const _filename = path.join(_cmdDir, ..._subdirs) + '.js';
+                if (this.exists(_filename))
+                {
+                    try
+                    {
+                        let _handler = require(_filename);
+                        if (_method && typeof _handler[_method] === 'function')
+                        {
+                            _result = await this._run(
+                                _handler[_method].bind(_handler),
+                                argv,
+                                chalk.magenta(`${path.basename(_filename)}::${_method}(...)`)
+                            );
+                        }
+                        else if (typeof _handler === 'function')
+                        {
+                            _result = await this._run(
+                                _handler,
+                                argv,
+                                chalk.magenta(`${path.basename(_filename)}::${_handler.name || ''}(...)`)
+                            );
+                        }
+                    }
+                    catch (error)
+                    {
+                        this.logException(error);
+                    }
+                }
+                _method = _subdirs.pop();
+            }
+        }
+        else if (typeof this[_name] === 'function')
+        {
+            _result = this[_name](argv);
         }
         if (_result !== true)
         {
@@ -186,11 +220,35 @@ class jfCli extends jfLogger
      *
      * @param {Object} commands Comandos a cargar.
      *
-     * @see https://github.com/joaquinfq/commands-options/blob/master/src/Command.js
+     * @see https://github.com/joaquinfq/jfCli/blob/master/src/Command.js
      */
     loadCommands(commands)
     {
         Command.parse(commands);
+    }
+
+    /**
+     * Carga el archivo de configuración.
+     *
+     * @return {Object|undefined} El objeto con la configuración o `undefined`
+     *                            si el archivo con la configuración no existe.
+     */
+    loadConfig()
+    {
+        const _cliFile = path.join(this.rootDir, this.constructor.FILE);
+        let _config;
+        if (this.exists(_cliFile))
+        {
+            try
+            {
+                _config = JSON.parse(this.read(_cliFile)) || {};
+            }
+            catch (error)
+            {
+                this.logException(error);
+            }
+        }
+        return _config;
     }
 
     /**
@@ -208,10 +266,9 @@ class jfCli extends jfLogger
     /**
      * Muestra por pantalla la información de la excepción.
      *
-     * @param {Error}    error Error a mostrar.
-     * @param {Boolean?} stack Indica si se muestra el stack.
+     * @param {Error} error Error a mostrar.
      */
-    logException(error, stack = false)
+    logException(error)
     {
         const [, _file, _line, _column] = error.stack.match(/\(([^:]+):(\d+):(\d+)\)/);
         this.log(
@@ -222,10 +279,83 @@ class jfCli extends jfLogger
             _column,
             error.message
         );
-        if (stack)
+        if (this.showStack)
         {
             error.stack.split('\n').forEach(line => this.log('error', line));
         }
+    }
+
+    /**
+     * Analiza la la configuración y la aplica a la instancia.
+     *
+     * @protected
+     */
+    _parseConfig()
+    {
+        const _config = this.loadConfig();
+        if (_config)
+        {
+            //------------------------------------------------------------------------------
+            // Aplicamos las propiedades a la instancia.
+            //------------------------------------------------------------------------------
+            for (const _property of Object.keys(_config))
+            {
+                const _current = this[_property];
+                if (_current !== undefined && typeof _current !== 'function')
+                {
+                    this[_property] = _config[_property];
+                }
+            }
+            //------------------------------------------------------------------------------
+            // Cargamos los comandos configurados.
+            //------------------------------------------------------------------------------
+            this.loadCommands(this.commands);
+        }
+    }
+
+    /**
+     * Resuelve el directorio del comando.
+     * Los pasos que se siguen son:
+     *
+     * - Si es una ruta absoluta, se devuelve tal cual.
+     * - Si no tiene subdirectorio:
+     *   - Se verifica si es un módulo de node tratando de resolver su ruta.
+     *   - Si no es un módulo, se concatena con el directorio actual.
+     * - Si tiene subdirectorio, se concatena con el directorio actual.
+     *
+     *
+     * @param {String} directory Ruta del directorio a resolver.
+     *
+     * @return {String}
+     */
+    resolveDir(directory)
+    {
+        if (!path.isAbsolute(directory))
+        {
+            let _directory;
+            if (!path.parse(directory).dir)
+            {
+                try
+                {
+                    _directory = path.resolve(
+                        require.resolve(
+                            directory,
+                            {
+                                paths : [
+                                    this.rootDir,
+                                    ...require.resolve.paths('A+B+C+C+D')
+                                ]
+                            }
+                        )
+                    );
+                }
+                catch (e)
+                {
+                }
+            }
+            directory = _directory || path.join(process.cwd(), directory);
+        }
+        return this.findUp(directory, 'package.json');
     }
 
     /**
@@ -244,8 +374,29 @@ class jfCli extends jfLogger
     async _run(handler, argv, name)
     {
         this.log('info', 'Ejecutando %s', name);
-
         return handler(this, argv);
+    }
+
+    /**
+     * Guarda la configuración de la instancia.
+     *
+     * @param {Object|String[]} properties Objeto o listado de propiedades que se guardarán.
+     *                                     Si se especifica un array de propiedades, se llenará un objeto
+     *                                     con los valores que tenga la instancia en dichas propiedades.
+     *                                     Si se pasa un objecto, se guardará el objeto directamente.
+     */
+    save(properties = ['commands', 'directories'])
+    {
+        if (Array.isArray(properties))
+        {
+            const _config = {};
+            for (const _property of properties.sort())
+            {
+                _config[_property] = this[_property];
+            }
+            properties = _config;
+        }
+        this.write(path.join(this.rootDir, this.constructor.FILE), JSON.stringify(properties, null, 4));
     }
 
     /**
@@ -261,40 +412,31 @@ class jfCli extends jfLogger
     {
         return new Spawn(this).run(cmd, args, options);
     }
+
     /**
      * Actualiza el archivo de configuración agregando comandos de otros proyectos.
+     *
+     * @return {Boolean} `true` para indicar que se proceso el comando.
      */
     update()
     {
-        const _directories = this.directories;
-        const _output = {};
-        for (const _project of Object.keys(_directories))
-        {
-            const _directory = _directories[_project];
-            const _commands = {};
-            fromFiles(this, _commands, this.scandir(path.join(_directory, 'src', 'commands')));
-            const _names = Object.keys(_commands);
-            if (_names.length)
+        return require('./commands/config')(
+            this,
             {
-                _names.forEach(
-                    name => _output[_project + ':' + name] = _commands[name]
-                );
+                directory : this.directories,
+                noMerge   : true
             }
-        }
-        const _cliFile = path.join(this.rootDir, '.jfcli');
-        this.write(
-            _cliFile,
-            JSON.stringify(
-                Object.assign(
-                    this.exists(_cliFile)
-                        ? JSON.parse(this.read(_cliFile))
-                        : {},
-                    _output
-                ),
-                null,
-                4
-            )
         );
+    }
+
+    /**
+     * Nombre del archivo de configuración.
+     *
+     * @return {String}
+     */
+    static get FILE()
+    {
+        return '.jfcli';
     }
 }
 

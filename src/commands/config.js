@@ -7,15 +7,15 @@ const path      = require('path');
  * Carga los comandos desde el directorio especificado y construye la configuración.
  *
  * @param {jf.cli.Cli} cli       Gestor del script.
+ * @param {String}     prefix    Prefijo del comando.
  * @param {String}     directory Directorio donde se buscarán los comandos.
  * @param {Object}     config    Configuración leída del archivo `.jfcli`.
  */
-function build(cli, directory, config)
+function build(cli, prefix, directory, config)
 {
     const _directory = path.join(directory, 'src', 'commands');
     if (cli.exists(_directory))
     {
-        const _prefix   = cc2sep.trimmed(path.basename(directory)).replace(/(^|.+-)cli-?/, '') || 'cli';
         const _commands = {};
         fromFiles(cli, _commands, cli.scandir(_directory));
         const _names = Object.keys(_commands);
@@ -34,7 +34,7 @@ function build(cli, directory, config)
                         ? _options[_option].toString().substr(2)
                         : _options[_option];
                 }
-                config.commands[_prefix + ':' + _command] = _options;
+                config.commands[prefix + ':' + _command] = _options;
             }
         }
     }
@@ -45,7 +45,24 @@ function build(cli, directory, config)
 }
 
 /**
- * Genera el archivo `.jfcli` con la configuración de los comandos permitidos.
+ * Convierte un listado de directorios a un objeto donde la clave es
+ * el nombre del módulo y el valor la ruta completa del directorio.
+ *
+ * @param {String[]} directories Listado de directorios.
+ *
+ * @return {Object}
+ */
+function toObject(directories)
+{
+    const _result = {};
+    directories.forEach(
+        dir => _result[cc2sep.trimmed(path.basename(dir)).replace(/(^|.+-)cli-?/, '') || 'cli'] = dir
+    );
+    return _result;
+}
+
+/**
+ * Genera el archivo de configuración.
  *
  * @command
  *
@@ -60,26 +77,47 @@ function build(cli, directory, config)
 module.exports = function config(cli, argv)
 {
     check.directory(cli, argv);
-    let _directory = argv.directory;
-    if (!Array.isArray(_directory))
+    let _directories = argv.directory;
+    if (typeof _directories === 'string')
     {
-        _directory = [_directory];
+        _directories = [_directories];
     }
-    const _config = argv.M
-        ? {}
-        : Object.assign({}, cli.commands);
-    for (const _dir of _directory)
+    if (Array.isArray(_directories))
     {
-        if (cli.exists(_dir))
+        _directories = toObject(_directories);
+    }
+    if (typeof _directories === 'object')
+    {
+        let _config;
+        if (argv.noMerge)
         {
-            build(cli, _dir, _config);
+            _config = {
+                commands    : {},
+                directories : {}
+            };
         }
         else
         {
-            cli.log('error', 'No se encontró el directorio %s', _dir);
+            _config = cli.loadConfig();
+            if (!_config.directories)
+            {
+                _config.directories = {};
+            }
         }
+        Object.assign(_config.directories, _directories);
+        for (const _prefix of Object.keys(_directories).sort())
+        {
+            const _dir = cli.resolveDir(_directories[_prefix]);
+            if (cli.exists(_dir))
+            {
+                build(cli, _prefix, _dir, _config);
+            }
+            else
+            {
+                cli.log('error', 'No se encontró el directorio %s', _dir);
+            }
+        }
+        cli.save(_config);
     }
-    cli.save();
-
     return true;
 };

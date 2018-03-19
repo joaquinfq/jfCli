@@ -9,5 +9,10 @@ const sep2cc = require('sep2cc');
  */
 module.exports = function(value, context)
 {
-    return sep2cc(value, context.hash.sep);
+    const _sep = context.hash.sep || '-';
+    if (context.hash.capitalize)
+    {
+        value = _sep + value;
+    }
+    return sep2cc(value, _sep);
 };

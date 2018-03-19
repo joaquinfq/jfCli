@@ -125,14 +125,20 @@ module.exports = class Spawn
     /**
      * Ejecuta un script de manera asíncrona.
      *
-     * @param {String}  cmd     Nombre o ruta del script.
-     * @param {Array?}  args    Argumentos del script.
-     * @param {Object?} options Opciones de ejecución del script.
+     * @param {String}            cmd     Nombre o ruta del script.
+     * @param {String|String[]?}  args    Argumentos del script.
+     * @param {Object?}           options Opciones de ejecución del script.
+     * @param {Function}          logger  Función que recogerá las líneas impresar por pantalla.
      *
      * @return {Promise}
      */
-    async run(cmd, args = [], options = {})
+    async run(cmd, args = [], options = {}, logger = null)
     {
+        if (!Array.isArray(args))
+        {
+            args = [args];
+        }
+
         return new Promise(
             (resolve, reject) =>
             {
@@ -147,8 +153,12 @@ module.exports = class Spawn
                 const _process = this.process = spawn(cmd, args, _options);
                 if (_options.stdio === 'pipe')
                 {
-                    _process.stdout.on('data', data => this._log('info', data));
-                    _process.stderr.on('data', data => this._log('error', data));
+                    if (typeof logger !== 'function')
+                    {
+                        logger = this._log.bind(this);
+                    }
+                    _process.stdout.on('data', data => logger('info', data));
+                    _process.stderr.on('data', data => logger('error', data));
                 }
                 _process.on('error', error => this._onError(reject, error));
                 _process.on('exit', code => this._onExit(resolve, reject, code));

@@ -153,9 +153,9 @@ module.exports = class jfCliOption
         if (this.type !== 'boolean')
         {
             _segments.push(this.type);
-            if (!this.required)
+            if (this.default !== null)
             {
-                _segments.push('');
+                _segments.push(this.default);
             }
         }
 

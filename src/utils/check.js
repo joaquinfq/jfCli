@@ -17,7 +17,7 @@ function checkDir(directory)
             dir => directory[dir] = checkDir(directory[dir])
         )
     }
-    else if (path.isAbsolute(directory[0]))
+    else if (!path.isAbsolute(directory))
     {
         directory = path.join(_cwd, directory);
     }
@@ -35,9 +35,11 @@ module.exports = {
      *
      * @param {jf.cli.Cli} cli Gestor del script.
      * @param {Object}     argv Argumentos de la línea de comandos.
+     *
+     * @return {String|Object} Información del directorio.
      */
     directory(cli, argv)
     {
-        argv.directory = argv.d = checkDir(argv.directory);
+        return argv.directory = argv.d = checkDir(argv.directory);
     }
 };

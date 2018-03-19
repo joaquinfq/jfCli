@@ -157,7 +157,7 @@ class jfCli extends jfLogger
             {
                 _subdirs.shift();
             }
-            while (_result !== true && _subdirs.length)
+            while (_result === false && _subdirs.length)
             {
                 const _filename = path.join(_cmdDir, ..._subdirs) + '.js';
                 if (this.exists(_filename))
@@ -194,7 +194,7 @@ class jfCli extends jfLogger
         {
             _result = this[_name](argv);
         }
-        if (_result !== true)
+        if (_result === false)
         {
             this.log('error', 'No se encontró un manejador para el comando %s', command.name);
         }
@@ -355,6 +355,7 @@ class jfCli extends jfLogger
             }
             directory = _directory || path.join(process.cwd(), directory);
         }
+
         return this.findUp(directory, 'package.json');
     }
 
@@ -401,16 +402,13 @@ class jfCli extends jfLogger
 
     /**
      * Ejecuta un script de manera asíncrona.
-     *
-     * @param {String}  cmd     Nombre o ruta del script.
-     * @param {Array?}  args    Argumentos del script.
-     * @param {Object?} options Opciones de ejecución del script.
+     * Los argumentos pasados serán enviados al método `Spawn.run`.
      *
      * @return {Promise}
      */
-    async script(cmd, args = [], options = {})
+    async script(...args)
     {
-        return new Spawn(this).run(cmd, args, options);
+        return new Spawn(this).run(...args);
     }
 
     /**
@@ -427,6 +425,19 @@ class jfCli extends jfLogger
                 noMerge   : true
             }
         );
+    }
+
+    /**
+     * Devuelve la utilidad especificada.
+     * Evita tener que instalar `jf-cli` en cada proyecto de comandos.
+     *
+     * @param {String} name Nombre del archivo de utilidad a devolver.
+     *
+     * @return {Function|Object}
+     */
+    utils(name)
+    {
+        return require(path.join(__dirname, 'utils', name));
     }
 
     /**

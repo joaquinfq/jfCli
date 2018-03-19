@@ -28,6 +28,7 @@
         "handlebars": "^4.0.11",
         "jf-file-system": "^2.0.0",
         "jf-logger": "^0.2.0",
-        "pad-values": "^1.0.1"
+        "pad-values": "^1.0.1",
+        "sep2cc": "^1.0.1"
     }
 }

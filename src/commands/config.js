@@ -1,4 +1,3 @@
-const check     = require('../utils/check');
 const cc2sep    = require('cc2sep');
 const fromFiles = require('../tools/from-files');
 const path      = require('path');
@@ -71,16 +70,13 @@ function toObject(directories)
  *
  * @param {jf.cli.Cli} cli  Gestor del script.
  * @param {Object}     argv Argumentos de la línea de comandos.
- *
- * @return {Boolean} `true` si el manejador es válido para el comando actual.
  */
 module.exports = function config(cli, argv)
 {
-    check.directory(cli, argv);
     let _directories = argv.directory;
     if (typeof _directories === 'string')
     {
-        _directories = [_directories];
+        _directories = [_directories || process.cwd()];
     }
     if (Array.isArray(_directories))
     {
@@ -119,5 +115,4 @@ module.exports = function config(cli, argv)
         }
         cli.save(_config);
     }
-    return true;
 };

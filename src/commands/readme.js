@@ -129,8 +129,6 @@ function splitOptions(config, properties, output)
  *
  * @param {jf.cli.Cli} cli  Gestor del script.
  * @param {Object}     argv Argumentos de la línea de comandos.
- *
- * @return {Boolean} `true` si el manejador es válido para el comando actual.
  */
 module.exports = function readme(cli, argv)
 {
@@ -157,5 +155,4 @@ module.exports = function readme(cli, argv)
             );
         }
     }
-    return true;
 };

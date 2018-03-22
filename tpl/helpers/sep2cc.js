@@ -5,7 +5,7 @@ const sep2cc = require('sep2cc');
  * @param {String} value    Valor a convertir.
  * @param {Object} context  Contexto de la plantilla.
  *
- * @return {*}
+ * @return {String} Texto convertido.
  */
 module.exports = function(value, context)
 {

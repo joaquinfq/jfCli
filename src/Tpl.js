@@ -38,7 +38,12 @@ module.exports = class Tpl
         );
         _tplDirectories.root = _rootDir;
         _tplDirectories.cli  = path.resolve(__dirname, '..');
-        Object.values(_tplDirectories).forEach(dir => this.loadHelpers(path.join(dir, 'src', 'helpers')));
+        Object.values(_tplDirectories).forEach(
+            dir => {
+                this.loadHelpers(path.join(dir, 'tpl', 'helpers'))
+                this.loadPartials(path.join(dir, 'tpl', 'partials'))
+            }
+        );
     }
 
     /**
@@ -131,6 +136,25 @@ module.exports = class Tpl
     }
 
     /**
+     * Carga las plantillas parciales existentes en un directorio.
+     *
+     * @param {String} dir Directorio que contiene las plantillas parciales.
+     */
+    loadPartials(dir)
+    {
+        const _cli = this.cli;
+        if (dir && _cli.exists(dir))
+        {
+            _cli.scandir(dir).forEach(
+                filename => handlebars.registerPartial(
+                    path.basename(filename, '.hbs').replace(/[^\w\d]+/g, '-'),
+                    _cli.read(filename)
+                )
+            );
+        }
+    }
+
+    /**
      * Renderiza una plantilla.
      *
      * @param {String} filename Ruta de la plantilla a renderizar.
@@ -156,7 +180,7 @@ module.exports = class Tpl
         const _cli = this.cli;
         for (let _directory of Object.values(this.directories))
         {
-            _directory = path.join(_directory, 'templates', template);
+            _directory = path.join(_directory, 'tpl', template);
             if (_cli.exists(_directory))
             {
                 _tpldir = _directory;

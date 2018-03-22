@@ -5,9 +5,13 @@ const cc2sep = require('cc2sep');
  * @param {String} value    Valor a convertir.
  * @param {Object} context  Contexto de la plantilla.
  *
- * @return {*}
+ * @return {String} Texto convertido.
  */
 module.exports = function(value, context)
 {
-    return cc2sep(value, context.hash.sep);
+    const _hash = context.hash;
+
+    return _hash.trim
+        ? cc2sep.trimmed(value, _hash.sep)
+        : cc2sep(value, _hash.sep);
 };

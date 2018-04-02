@@ -72,7 +72,13 @@ module.exports = class Tpl
      */
     fromDir(directory, context, filter = null)
     {
-        this.cli.scandir(directory, filter)
+        const _cli = this.cli;
+        if (!path.isAbsolute(directory) && !_cli.exists(directory))
+        {
+            directory        = this.resolve(directory);
+            context.relative = directory;
+        }
+        _cli.scandir(directory, filter)
             .forEach(filename => this.generate(filename, context));
     }
 

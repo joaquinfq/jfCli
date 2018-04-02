@@ -333,6 +333,7 @@ class jfCli extends jfLogger
         if (!path.isAbsolute(directory))
         {
             let _directory;
+            const _rootDir = this.rootDir;
             if (!path.parse(directory).dir)
             {
                 try
@@ -342,7 +343,7 @@ class jfCli extends jfLogger
                             directory,
                             {
                                 paths : [
-                                    this.rootDir,
+                                    _rootDir,
                                     ...require.resolve.paths('A+B+C+C+D')
                                 ]
                             }
@@ -353,7 +354,18 @@ class jfCli extends jfLogger
                 {
                 }
             }
-            directory = _directory || path.join(process.cwd(), directory);
+            if (_directory)
+            {
+                directory = _directory;
+            }
+            else if (_rootDir)
+            {
+                directory = path.join(_rootDir, directory);
+            }
+            else
+            {
+                directory = path.join(process.cwd(), directory);
+            }
         }
 
         return this.findUp(directory, 'package.json');

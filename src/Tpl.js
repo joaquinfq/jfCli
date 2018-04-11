@@ -183,10 +183,13 @@ module.exports = class Tpl
     resolve(template)
     {
         let _tpldir;
-        const _cli = this.cli;
-        for (let _directory of Object.values(this.directories))
+        const _cli         = this.cli;
+        const _directories = this.directories;
+        const _modules     = Object.keys(_directories);
+        _modules.unshift(this.cli.command.name.split(':')[0]);
+        for (const _module of _modules)
         {
-            _directory = path.join(_directory, 'tpl', template);
+            const _directory = path.join(_directories[_module], 'tpl', template);
             if (_cli.exists(_directory))
             {
                 _tpldir = _directory;

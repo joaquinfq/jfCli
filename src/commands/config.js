@@ -40,6 +40,7 @@ function build(cli, prefix, directory, config)
     else
     {
         cli.log('error', 'El directorio %s no existe', _directory);
+        throw new Error('Se debe especificar un proyecto con comandos a agregar.');
     }
 }
 
@@ -100,19 +101,29 @@ module.exports = function config(cli, argv)
                 _config.directories = {};
             }
         }
-        Object.assign(_config.directories, _directories);
-        for (const _prefix of Object.keys(_directories).sort())
+        try
         {
-            const _dir = cli.resolveDir(_directories[_prefix]);
-            if (cli.exists(_dir))
+            Object.assign(_config.directories, _directories);
+            for (const _prefix of Object.keys(_directories).sort())
             {
-                build(cli, _prefix, _dir, _config);
+                const _dir = path.relative(
+                    cli.rootDir,
+                    cli.resolveDir(_directories[_prefix])
+                );
+                if (cli.exists(_dir))
+                {
+                    build(cli, _prefix, _dir, _config);
+                }
+                else
+                {
+                    cli.log('error', 'No se encontró el directorio %s', _dir);
+                }
             }
-            else
-            {
-                cli.log('error', 'No se encontró el directorio %s', _dir);
-            }
+            cli.save(_config);
         }
-        cli.save(_config);
+        catch(e)
+        {
+            cli.log('error', e.message);
+        }
     }
 };

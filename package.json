@@ -1,6 +1,6 @@
 {
     "name": "jf-cli",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "description": "Facilitates the execution of scripts from the command line with log and file system utilities.",
     "main": "src/Cli.js",
     "repository": {
@@ -30,5 +30,8 @@
         "jf-logger": "^0.2.0",
         "pad-values": "^1.0.1",
         "sep2cc": "^1.0.1"
+    },
+    "devDependencies": {
+        "yargs": "^11.0.0"
     }
 }

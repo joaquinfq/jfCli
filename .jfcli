@@ -1,0 +1,17 @@
+{
+    "commands": {
+        "cli:config": {
+            "": "Genera el archivo de configuración.",
+            "d": "Directorio del proyecto|directory|string|",
+            "M": "No fusionar con el actual|no-merge"
+        },
+        "cli:readme": {
+            "": "Genera el README.md de un proyecto con comandos.",
+            "d": "Directorio del proyecto|directory|string|",
+            "t": "Ruta de la plantilla a usar|template|string|"
+        }
+    },
+    "directories": {
+        "cli": "."
+    }
+}

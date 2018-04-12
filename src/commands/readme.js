@@ -120,7 +120,7 @@ function splitOptions(config, properties, output)
 }
 
 /**
- * Genera el archivo README.md de un repositorio con comandos.
+ * Genera el README.md de un proyecto con comandos.
  *
  * @command
  *
@@ -132,27 +132,23 @@ function splitOptions(config, properties, output)
  */
 module.exports = function readme(cli, argv)
 {
-    let _directory = cli.resolveDir(argv.directory || process.cwd());
-    if (cli.exists(_directory))
+    let _directory  = cli.utils('check').directory(cli, argv);
+    const _commands = buildReadme(cli, _directory);
+    if (_commands)
     {
-        const _commands = buildReadme(cli, _directory);
-        if (_commands)
-        {
-            const _pkgFile = path.join(_directory, 'package.json');
-            cli.write(
-                path.join(_directory, 'README.md'),
-                cli.getTpl().render(
-                    argv.tpl || path.join(__dirname, 'readme.md.hbs'),
-                    Object.assign(
-                        {
-                            commands : _commands
-                        },
-                        cli.exists(_pkgFile)
-                            ? require(_pkgFile)
-                            : {}
-                    )
-                )
-            );
-        }
+        const _pkgFile = path.join(_directory, 'package.json');
+        cli.getTpl().generate(
+            argv.tpl || 'md/README.md.hbs',
+            Object.assign(
+                {
+                    commands : _commands,
+                    outdir   : _directory
+                },
+                argv,
+                cli.exists(_pkgFile)
+                    ? require(_pkgFile)
+                    : {}
+            )
+        );
     }
 };

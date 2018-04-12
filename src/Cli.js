@@ -101,11 +101,6 @@ class jfCli extends jfLogger
         //------------------------------------------------------------------------------
         // Cargamos los comandos que son métodos de clase y la configuración.
         //------------------------------------------------------------------------------
-        this.loadCommands(
-            {
-                'update' : 'Actualiza el archivo de configuración'
-            }
-        );
         this._parseConfig();
     }
 
@@ -184,7 +179,7 @@ class jfCli extends jfLogger
                     }
                     catch (error)
                     {
-                        this.logException(error);
+                        this.logException(error, this.showStack);
                     }
                 }
                 _method = _subdirs.pop();
@@ -236,18 +231,26 @@ class jfCli extends jfLogger
     loadConfig()
     {
         const _cliFile = path.join(this.rootDir, this.constructor.FILE);
-        let _config;
+        let _config = {
+            commands    : {},
+            directories : {}
+        };
         if (this.exists(_cliFile))
         {
             try
             {
-                _config = JSON.parse(this.read(_cliFile)) || {};
+                Object.assign(
+                    _config,
+                    JSON.parse(this.read(_cliFile)) || {}
+                );
             }
             catch (error)
             {
-                this.logException(error);
+                this.log('error', 'No se pudo leer el archivo %s', _cliFile);
+                this.logException(error, false);
             }
         }
+
         return _config;
     }
 
@@ -266,11 +269,15 @@ class jfCli extends jfLogger
     /**
      * Muestra por pantalla la información de la excepción.
      *
-     * @param {Error} error Error a mostrar.
+     * @param {Error}   error     Error a mostrar.
+     * @param {Boolean} showStack Si es `true` se muestra la pila de llamadas.
      */
-    logException(error)
+    logException(error, showStack)
     {
-        const [, _file, _line, _column] = error.stack.match(/\(([^:]+):(\d+):(\d+)\)/);
+        const [, _file, _line, _column] = error.stack
+            .split(/[\r\n]/)
+            .map(l => l.match(/\(([^:]+):(\d+):(\d+)\)/))
+            .filter(l => l && !l.includes('<anonymous>'))[0];
         this.log(
             'error',
             'Excepción en el archivo %s (%s:%s): %s',
@@ -279,7 +286,7 @@ class jfCli extends jfLogger
             _column,
             error.message
         );
-        if (this.showStack)
+        if (showStack)
         {
             error.stack.split('\n').forEach(line => this.log('error', line));
         }
@@ -293,24 +300,31 @@ class jfCli extends jfLogger
     _parseConfig()
     {
         const _config = this.loadConfig();
-        if (_config)
+        //------------------------------------------------------------------------------
+        // Aplicamos las propiedades a la instancia.
+        //------------------------------------------------------------------------------
+        for (const _property of Object.keys(_config))
         {
-            //------------------------------------------------------------------------------
-            // Aplicamos las propiedades a la instancia.
-            //------------------------------------------------------------------------------
-            for (const _property of Object.keys(_config))
+            const _current = this[_property];
+            if (_current !== undefined && typeof _current !== 'function')
             {
-                const _current = this[_property];
-                if (_current !== undefined && typeof _current !== 'function')
-                {
-                    this[_property] = _config[_property];
-                }
+                this[_property] = _config[_property];
             }
-            //------------------------------------------------------------------------------
-            // Cargamos los comandos configurados.
-            //------------------------------------------------------------------------------
-            this.loadCommands(this.commands);
         }
+        if (!this.directories.cli)
+        {
+            this.directories.cli = path.relative(this.rootDir, path.resolve(__dirname, '..')) || '.';
+        }
+        if (!this.commands.update)
+        {
+            this.commands.update = {
+                '' : 'Actualiza el archivo de configuración.'
+            };
+        }
+        //------------------------------------------------------------------------------
+        // Cargamos los comandos configurados.
+        //------------------------------------------------------------------------------
+        this.loadCommands(this.commands);
     }
 
     /**
@@ -424,7 +438,7 @@ class jfCli extends jfLogger
     }
 
     /**
-     * Actualiza el archivo de configuración agregando comandos de otros proyectos.
+     * Actualiza el archivo de configuración con comandos de otros proyectos.
      *
      * @return {Boolean} `true` para indicar que se proceso el comando.
      */

@@ -1,6 +1,6 @@
 {
     "name": "jf-cli",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "description": "Facilitates the execution of scripts from the command line with log and file system utilities.",
     "main": "src/Cli.js",
     "repository": {

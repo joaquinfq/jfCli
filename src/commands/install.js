@@ -48,7 +48,20 @@ module.exports = async function install(cli, argv)
                                     cwd : _outdir
                                 }
                             );
-                            _directories[_name] = path.join(_outdir, _name);
+                            if (cli.exists(_moddir))
+                            {
+                                _directories[_name] = _moddir;
+                                if (cli.exists(path.join(_moddir, 'package.json')))
+                                {
+                                    await cli.script(
+                                        'npm',
+                                        ['install'],
+                                        {
+                                            cwd : _moddir
+                                        }
+                                    );
+                                }
+                            }
                         }
                         break;
                     default:

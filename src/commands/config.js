@@ -1,6 +1,7 @@
-const cc2sep    = require('cc2sep');
-const fromFiles = require('../tools/from-files');
-const path      = require('path');
+const cc2sep        = require('cc2sep');
+const fromFiles     = require('../tools/from-files');
+const parseCommands = require('../tools/parse-commands');
+const path          = require('path');
 
 /**
  * Carga los comandos desde el directorio especificado y construye la configuración.
@@ -17,24 +18,17 @@ function build(cli, prefix, directory, config)
     {
         const _commands = {};
         fromFiles(cli, _commands, cli.scandir(_directory));
-        const _names = Object.keys(_commands);
-        if (_names.length)
+        if (Object.keys(_commands).length)
         {
+            parseCommands(_commands, prefix);
             if (!config.commands)
             {
                 config.commands = {};
             }
-            for (const _command of _names)
-            {
-                const _options = _commands[_command];
-                for (const _option of Object.keys(_options))
-                {
-                    _options[_option] = _option
-                        ? _options[_option].toString().substr(2)
-                        : _options[_option];
-                }
-                config.commands[prefix + ':' + _command] = _options;
-            }
+            Object.assign(
+                config.commands,
+                _commands
+            );
         }
     }
     else
@@ -66,15 +60,15 @@ function toObject(directories)
  *
  * @command
  *
- * @option d Directorio del proyecto|directory|string|
- * @option M No fusionar con el actual|no-merge
+ * @option d Directorios con proyectos|directories|string|
+ * @option m Fusionar con el actual|merge
  *
  * @param {jf.cli.Cli} cli  Gestor del script.
  * @param {Object}     argv Argumentos de la línea de comandos.
  */
 module.exports = function config(cli, argv)
 {
-    let _directories = argv.directory;
+    let _directories = argv.directories;
     if (typeof _directories === 'string')
     {
         _directories = [_directories || process.cwd()];
@@ -86,14 +80,7 @@ module.exports = function config(cli, argv)
     if (typeof _directories === 'object')
     {
         let _config;
-        if (argv.noMerge)
-        {
-            _config = {
-                commands    : {},
-                directories : {}
-            };
-        }
-        else
+        if (argv.merge)
         {
             _config = cli.loadConfig();
             if (!_config.directories)
@@ -101,8 +88,17 @@ module.exports = function config(cli, argv)
                 _config.directories = {};
             }
         }
+        else
+        {
+            _config = {
+                commands    : {},
+                directories : {}
+            };
+        }
         try
         {
+            fromFiles(cli, _config.commands, cli.scandir(__dirname));
+            parseCommands(_config.commands);
             Object.assign(_config.directories, _directories);
             for (const _prefix of Object.keys(_directories).sort())
             {
@@ -112,7 +108,7 @@ module.exports = function config(cli, argv)
                 );
                 if (cli.exists(_dir))
                 {
-                    build(cli, _prefix, _dir, _config);
+                    build(cli, _prefix + ':', _dir, _config);
                 }
                 else
                 {
@@ -121,7 +117,7 @@ module.exports = function config(cli, argv)
             }
             cli.save(_config);
         }
-        catch(e)
+        catch (e)
         {
             cli.log('error', e.message);
         }

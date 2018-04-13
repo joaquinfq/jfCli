@@ -185,9 +185,20 @@ class jfCli extends jfLogger
                 _method = _subdirs.pop();
             }
         }
-        else if (typeof this[_name] === 'function')
+        else
         {
-            _result = this[_name](argv);
+            const _cmdFile = path.resolve(__dirname, 'commands', _name) + '.js';
+            if (this.exists(_cmdFile))
+            {
+                try
+                {
+                    _result = await require(_cmdFile)(this, argv);
+                }
+                catch (error)
+                {
+                    this.logException(error, this.showStack);
+                }
+            }
         }
         if (_result === false)
         {
@@ -311,16 +322,10 @@ class jfCli extends jfLogger
                 this[_property] = _config[_property];
             }
         }
-        if (!this.directories.cli)
-        {
-            this.directories.cli = path.relative(this.rootDir, path.resolve(__dirname, '..')) || '.';
-        }
-        if (!this.commands.update)
-        {
-            this.commands.update = {
-                '' : 'Actualiza el archivo de configuración.'
-            };
-        }
+        //------------------------------------------------------------------------------
+        // Agregamos los comandos propios de la herramienta.
+        //------------------------------------------------------------------------------
+        require('./tools/from-files')(this, this.commands, this.scandir(path.join(__dirname, 'commands')));
         //------------------------------------------------------------------------------
         // Cargamos los comandos configurados.
         //------------------------------------------------------------------------------
@@ -435,22 +440,6 @@ class jfCli extends jfLogger
     async script(...args)
     {
         return new Spawn(this).run(...args);
-    }
-
-    /**
-     * Actualiza el archivo de configuración con comandos de otros proyectos.
-     *
-     * @return {Boolean} `true` para indicar que se proceso el comando.
-     */
-    update()
-    {
-        return require('./commands/config')(
-            this,
-            {
-                directory : this.directories,
-                noMerge   : true
-            }
-        );
     }
 
     /**

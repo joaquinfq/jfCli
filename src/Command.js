@@ -43,7 +43,7 @@ module.exports = class jfCliCommand
          * @type {Object}
          */
         this.options = {};
-        //
+        //---------------------------------------------------------------------
         this.parse(config);
     }
 
@@ -68,7 +68,11 @@ module.exports = class jfCliCommand
                 }
                 else
                 {
-                    if (typeof value === 'string')
+                    if (value instanceof Option)
+                    {
+                        value = value.toString();
+                    }
+                    else if (typeof value === 'string')
                     {
                         value = `${key}|${value}`;
                     }

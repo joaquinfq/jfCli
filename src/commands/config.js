@@ -61,14 +61,13 @@ function toObject(directories)
  * @command
  *
  * @option d Directorios con proyectos|directories|string|
- * @option m Fusionar con el actual|merge
  *
  * @param {jf.cli.Cli} cli  Gestor del script.
  * @param {Object}     argv Argumentos de la línea de comandos.
  */
 module.exports = function config(cli, argv)
 {
-    let _directories = argv.directories;
+    let _directories = argv.directories || cli.directories;
     if (typeof _directories === 'string')
     {
         _directories = [_directories || process.cwd()];
@@ -77,29 +76,28 @@ module.exports = function config(cli, argv)
     {
         _directories = toObject(_directories);
     }
+    else if (_directories && typeof _directories === 'object')
+    {
+        _directories = toObject(Object.values(_directories));
+    }
     if (typeof _directories === 'object')
     {
-        let _config;
-        if (argv.merge)
-        {
-            _config = cli.loadConfig();
-            if (!_config.directories)
-            {
-                _config.directories = {};
-            }
-        }
-        else
-        {
-            _config = {
-                commands    : {},
-                directories : {}
-            };
-        }
         try
         {
+            const _config = {
+                commands    : {},
+                directories : _directories
+            };
+            //------------------------------------------------------------------------------
+            // Agregamos los comandos provistos por jfCli
+            //------------------------------------------------------------------------------
             fromFiles(cli, _config.commands, cli.scandir(__dirname));
             parseCommands(_config.commands);
-            Object.assign(_config.directories, _directories);
+            //------------------------------------------------------------------------------
+            // Agregamos los comandos encontrados en los directorios especificados.
+            // Si un directorio o un comando ya no se encuentra, se elimina del resultado.
+            //------------------------------------------------------------------------------
+            const _oldDirectories = _config.directories;
             for (const _prefix of Object.keys(_directories).sort())
             {
                 const _dir = path.relative(
@@ -108,10 +106,12 @@ module.exports = function config(cli, argv)
                 );
                 if (cli.exists(_dir))
                 {
+                    _oldDirectories[_prefix] = _dir;
                     build(cli, _prefix + ':', _dir, _config);
                 }
                 else
                 {
+                    delete _oldDirectories[_prefix];
                     cli.log('error', 'No se encontró el directorio %s', _dir);
                 }
             }

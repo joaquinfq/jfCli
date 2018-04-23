@@ -65,7 +65,7 @@ module.exports = async function install(cli, argv)
                         }
                         break;
                     default:
-                        if (path.isAbsolute(_module))
+                        if (path.isAbsolute(_module) || _module[0] === '.')
                         {
                             _directories[path.basename(_module)] = _module;
                         }
@@ -77,7 +77,7 @@ module.exports = async function install(cli, argv)
                 }
             }
             cli.log('debug', 'Actualizando configuración');
-            cmdConfig(cli, { directories : Object.values(cli.directories) });
+            cmdConfig(cli, {});
         }
     }
 };

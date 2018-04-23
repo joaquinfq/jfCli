@@ -10,9 +10,12 @@ const path          = require('path');
  * @param {String}     prefix    Prefijo del comando.
  * @param {String}     directory Directorio donde se buscarán los comandos.
  * @param {Object}     config    Configuración leída del archivo `.jfcli`.
+ *
+ * @return {Boolean} `true` si se encontraron comandos.
  */
 function build(cli, prefix, directory, config)
 {
+    let _found = false;
     const _directory = path.join(directory, 'src', 'commands');
     if (cli.exists(_directory))
     {
@@ -25,17 +28,20 @@ function build(cli, prefix, directory, config)
             {
                 config.commands = {};
             }
-            Object.assign(
-                config.commands,
-                _commands
-            );
+            Object.assign(config.commands, _commands);
+            _found = true;
+        }
+        else
+        {
+            cli.log('error', 'El directorio %s no tiene comandos', _directory);
         }
     }
     else
     {
         cli.log('error', 'El directorio %s no existe', _directory);
-        throw new Error('Se debe especificar un proyecto con comandos a agregar.');
     }
+
+    return _found;
 }
 
 /**
@@ -67,7 +73,7 @@ function toObject(directories)
  */
 module.exports = function config(cli, argv)
 {
-    let _directories = argv.directories || cli.directories;
+    let _directories = argv.directories;
     if (typeof _directories === 'string')
     {
         _directories = [_directories || process.cwd()];
@@ -80,46 +86,48 @@ module.exports = function config(cli, argv)
     {
         _directories = toObject(Object.values(_directories));
     }
-    if (typeof _directories === 'object')
+    _directories = Object.assign({}, cli.directories, _directories);
+    try
     {
-        try
+        const _config = {
+            commands    : {},
+            directories : _directories
+        };
+        //------------------------------------------------------------------------------
+        // Agregamos los comandos provistos por jfCli
+        //------------------------------------------------------------------------------
+        fromFiles(cli, _config.commands, cli.scandir(__dirname));
+        parseCommands(_config.commands);
+        //------------------------------------------------------------------------------
+        // Agregamos los comandos encontrados en los directorios especificados.
+        // Si un directorio o un comando ya no se encuentra, se elimina del resultado.
+        //------------------------------------------------------------------------------
+        const _oldDirectories = _config.directories;
+        const _rootDir        = cli.rootDir;
+        for (const _prefix of Object.keys(_directories).sort())
         {
-            const _config = {
-                commands    : {},
-                directories : _directories
-            };
-            //------------------------------------------------------------------------------
-            // Agregamos los comandos provistos por jfCli
-            //------------------------------------------------------------------------------
-            fromFiles(cli, _config.commands, cli.scandir(__dirname));
-            parseCommands(_config.commands);
-            //------------------------------------------------------------------------------
-            // Agregamos los comandos encontrados en los directorios especificados.
-            // Si un directorio o un comando ya no se encuentra, se elimina del resultado.
-            //------------------------------------------------------------------------------
-            const _oldDirectories = _config.directories;
-            for (const _prefix of Object.keys(_directories).sort())
+            const _dir = path.resolve(_rootDir, _directories[_prefix]);
+            if (cli.exists(_dir))
             {
-                const _dir = path.relative(
-                    cli.rootDir,
-                    cli.resolveDir(_directories[_prefix])
-                );
-                if (cli.exists(_dir))
+                if (build(cli, _prefix + ':', _dir, _config))
                 {
-                    _oldDirectories[_prefix] = _dir;
-                    build(cli, _prefix + ':', _dir, _config);
+                    _oldDirectories[_prefix] = path.relative(_rootDir, _dir) || '.';
                 }
                 else
                 {
                     delete _oldDirectories[_prefix];
-                    cli.log('error', 'No se encontró el directorio %s', _dir);
                 }
             }
-            cli.save(_config);
+            else
+            {
+                delete _oldDirectories[_prefix];
+                cli.log('error', 'No se encontró el directorio %s', _dir);
+            }
         }
-        catch (e)
-        {
-            cli.log('error', e.message);
-        }
+        cli.save(_config);
+    }
+    catch (e)
+    {
+        cli.log('error', e.message);
     }
 };

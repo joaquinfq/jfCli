@@ -186,16 +186,25 @@ module.exports = class Tpl
         const _cli         = this.cli;
         const _directories = this.directories;
         const _modules     = Object.keys(_directories);
-        _modules.unshift(this.cli.command.name.split(':')[0]);
-        for (const _module of _modules)
+        const _command     = this.cli.command.name.split(':');
+        if (_command.length > 1)
         {
-            const _directory = path.join(_directories[_module], 'tpl', template);
-            if (_cli.exists(_directory))
+            _modules.unshift(_command[0]);
+            for (const _module of _modules)
             {
-                _tpldir = _directory;
-                break;
+                const _directory = path.join(_directories[_module], 'tpl', template);
+                if (_cli.exists(_directory))
+                {
+                    _tpldir = _directory;
+                    break;
+                }
             }
         }
+        else
+        {
+            _tpldir = path.join(__dirname, '..', 'tpl', template);
+        }
+
         return _tpldir;
     }
 };

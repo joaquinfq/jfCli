@@ -19,7 +19,7 @@ module.exports = async function install(cli, argv)
         const _cmds = argv._;
         if (Array.isArray(_cmds) && _cmds[0] === 'install')
         {
-            const _directories = cli.directories;
+            const _directories = Object.values(cli.directories);
             for (const _module of _cmds.slice(1))
             {
                 const [_type, ..._parts] = _module.split(SEP);
@@ -27,7 +27,7 @@ module.exports = async function install(cli, argv)
                 switch (_type)
                 {
                     case 'file':
-                        _directories[path.basename(_path)] = _path;
+                        _directories.push(path.resolve(_path));
                         break;
                     case 'git':
                     case 'hg':
@@ -50,7 +50,7 @@ module.exports = async function install(cli, argv)
                             );
                             if (cli.exists(_moddir))
                             {
-                                _directories[_name] = _moddir;
+                                _directories.push(_moddir);
                                 if (cli.exists(path.join(_moddir, 'package.json')))
                                 {
                                     await cli.script(
@@ -67,7 +67,7 @@ module.exports = async function install(cli, argv)
                     default:
                         if (path.isAbsolute(_module) || _module[0] === '.')
                         {
-                            _directories[path.basename(_module)] = _module;
+                            _directories.push(path.resolve(_module));
                         }
                         else
                         {
@@ -77,7 +77,12 @@ module.exports = async function install(cli, argv)
                 }
             }
             cli.log('debug', 'Actualizando configuración');
-            cmdConfig(cli, {});
+            cmdConfig(
+                cli,
+                {
+                    directories : _directories
+                }
+            );
         }
     }
 };

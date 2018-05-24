@@ -146,7 +146,7 @@ module.exports = class Spawn
                     {
                         cwd   : process.cwd(),
                         stdio : 'pipe',
-                        shell : true
+                        shell : false
                     },
                     options
                 );

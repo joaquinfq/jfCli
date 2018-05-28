@@ -57,7 +57,8 @@ module.exports = async function install(cli, argv)
                                         'npm',
                                         ['install'],
                                         {
-                                            cwd : _moddir
+                                            cwd   : _moddir,
+                                            shell : true
                                         }
                                     );
                                 }

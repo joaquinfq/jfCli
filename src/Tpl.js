@@ -97,7 +97,7 @@ module.exports = class Tpl
     generate(filename, context)
     {
         let _content;
-        if (!path.isAbsolute(filename[0]))
+        if (!path.isAbsolute(filename))
         {
             // Se transforma el nombre relativo a absoluto resolviendo el primer segmento
             // que corresponde con el subdirectorio de plantillas.
